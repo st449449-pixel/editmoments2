@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>婚禮賓客與桌位管理 - 吉伊 & 小八</title>
+    
+    <!-- PWA 設定 -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#fbfaf8">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="婚禮統籌">
+    <link rel="apple-touch-icon" href="icon.png">
+
+    <!-- 外部資源 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&display=swap');
+        
+        body { 
+            font-family: 'Noto Serif TC', serif; 
+            letter-spacing: 0.05em;
+            overscroll-behavior-y: none;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #d6d3d1; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #a8a29e; }
+        
+        .hidden { display: none; }
+        input:focus { outline: none; }
+        
+        input::placeholder {
+            color: #d6d3d1;
+            font-style: italic;
+        }
+
+        /* PWA 安裝提示樣式 (可選) */
+        #pwa-install-btn {
+            display: none;
+        }
+    </style>
+</head>
+<body class="bg-[#fbfaf8] text-[#57534e]"> 
+
+    <div class="flex flex-col h-screen overflow-hidden">
+        <!-- Header -->
+        <header class="bg-[#fbfaf8] border-b border-[#e7e5e4] px-6 py-5 flex flex-col md:flex-row justify-between items-center z-10 shrink-0 select-none">
+            <div class="text-center md:text-left">
+                <h1 class="text-2xl font-bold text-[#9f8888] flex items-center justify-center md:justify-start gap-3">
+                    <i data-lucide="heart" class="fill-[#d4c5c5] text-[#9f8888]"></i> 
+                    <span class="tracking-widest">吉伊 & 小八</span> 
+                    <span class="text-base font-normal text-[#a8a29e] ml-2">賓客管理</span>
+                </h1>
+                <p class="text-xs text-[#a8a29e] mt-1 tracking-wider">2026.02.30 | 台南安平亞果薈</p>
+            </div>
+
+            <!-- Branding & Install Area -->
+            <div class="mt-4 md:mt-0 flex items-center gap-4">
+                 <!-- 安裝按鈕 (當瀏覽器支援時顯示) -->
+                <button id="pwa-install-btn" class="hidden text-xs bg-[#b4a0a0] text-white px-3 py-1.5 rounded-full shadow-sm hover:bg-[#a39090] transition-colors">
+                    <i data-lucide="download" size="12" class="inline mr-1"></i> 安裝 App
+                </button>
+
+                <a href="https://www.instagram.com/editmoments_official?igsh=Z2s2OHg0bmcydzM1" target="_blank" class="flex items-center gap-2 text-[#a8a29e] hover:text-[#b4a0a0] transition-colors group cursor-pointer" title="追蹤我們">
+                    <span class="text-[10px] md:text-xs tracking-widest font-serif opacity-80 group-hover:opacity-100 uppercase border-b border-transparent group-hover:border-[#b4a0a0] transition-all">Designed by Edit Moments</span>
+                    <i data-lucide="instagram" size="18" class="group-hover:scale-110 transition-transform"></i>
+                </a>
+            </div>
+        </header>
+
+        <div class="flex flex-1 overflow-hidden">
+            <nav class="hidden md:flex w-64 bg-[#fbfaf8] border-r border-[#e7e5e4] flex-col p-6 gap-3 overflow-y-auto select-none">
+                <button onclick="switchTab('guests')" id="tab-btn-guests" class="tab-btn flex items-center gap-4 px-5 py-3 rounded-lg transition-all bg-[#b4a0a0] text-white shadow-sm">
+                    <i data-lucide="users-2" size="18"></i> <span class="tracking-wide">賓客名單</span>
+                </button>
+                <button onclick="switchTab('seating')" id="tab-btn-seating" class="tab-btn flex items-center gap-4 px-5 py-3 rounded-lg transition-all text-[#78716c] hover:bg-[#f5f5f4]">
+                    <i data-lucide="layout" size="18"></i> <span class="tracking-wide">桌位分配</span>
+                </button>
+            </nav>
+            
+            <!-- Main Content Area -->
+            <main class="flex-1 overflow-y-auto p-4 md:p-10 custom-scrollbar">
+                <!-- Guest View -->
+                <div id="view-guests" class="view-section space-y-8">
+                    <div class="bg-white p-8 rounded-xl shadow-[0_2px_10px_-3px_rgba(0,0,0,0.05)] border border-[#f5f5f4] mb-6">
+                        <div class="flex justify-between items-start md:items-center flex-col md:flex-row gap-4">
+                            <div>
+                                <h2 class="text-xl font-bold flex items-center gap-2 text-[#78716c]">
+                                    <i data-lucide="users-2" class="text-[#b4a0a0]"></i> 賓客名單管理
+                                </h2>
+                                <p class="text-xs text-[#a8a29e] mt-2 tracking-wide">細緻記錄每一份祝福，妥善安排賓客需求。</p>
+                            </div>
+                            <!-- Button: 鼠尾草綠 -->
+                            <button onclick="exportGuestsCSV()" class="flex items-center gap-2 bg-[#8da399] hover:bg-[#7a8f86] text-white px-6 py-2 rounded-lg text-sm transition-colors shadow-sm tracking-wide">
+                                <i data-lucide="download" size="16"></i> 匯出名單 (.csv)
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" id="guest-stats">
+                        <!-- Stats rendered via JS -->
+                    </div>
+
+                    <!-- Guest Lists -->
+                    <div id="groom-list-container"></div>
+                    <div id="bride-list-container"></div>
+                </div>
+
+                <!-- Seating View -->
+                <div id="view-seating" class="view-section hidden space-y-8">
+                    <div class="bg-white p-8 rounded-xl shadow-[0_2px_10px_-3px_rgba(0,0,0,0.05)] border border-[#f5f5f4] mb-6">
+                        <div class="flex justify-between items-start md:items-center flex-col md:flex-row gap-4">
+                            <div>
+                                <h2 class="text-xl font-bold flex items-center gap-2 text-[#78716c]">
+                                    <i data-lucide="layout" class="text-[#b4a0a0]"></i> 桌位分配與統計
+                                </h2>
+                                <p class="text-xs text-[#a8a29e] mt-2 tracking-wide">規劃舒適的用餐空間，讓賓主盡歡。</p>
+                            </div>
+                            <div class="flex gap-3 w-full md:w-auto">
+                                <button onclick="exportSeatingCSV()" class="flex-1 md:flex-none flex items-center justify-center gap-2 bg-[#8da399] hover:bg-[#7a8f86] text-white px-6 py-2 rounded-lg text-sm transition-colors shadow-sm tracking-wide">
+                                    <i data-lucide="file-spreadsheet" size="16"></i> 匯出桌位
+                                </button>
+                                <button onclick="addTable()" class="flex-1 md:flex-none flex items-center justify-center gap-2 bg-[#b4a0a0] hover:bg-[#a39090] text-white px-6 py-2 rounded-lg text-sm transition-colors shadow-sm tracking-wide">
+                                    <i data-lucide="plus-circle" size="16"></i> 新增桌次
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="seating-totals">
+                        <!-- Totals rendered via JS -->
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="tables-grid">
+                        <!-- Tables rendered via JS -->
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- Mobile Navigation -->
+        <nav class="md:hidden flex bg-[#fbfaf8] border-t border-[#e7e5e4] p-3 gap-3 shadow-lg shrink-0 safe-area-bottom">
+            <button onclick="switchTab('guests')" id="mobile-tab-guests" class="mobile-tab-btn flex flex-col items-center flex-1 p-3 rounded-lg bg-[#b4a0a0] text-white transition-all">
+                <i data-lucide="users-2" size="18"></i> <span class="text-[11px] mt-1 tracking-widest">名單</span>
+            </button>
+            <button onclick="switchTab('seating')" id="mobile-tab-seating" class="mobile-tab-btn flex flex-col items-center flex-1 p-3 rounded-lg text-[#a8a29e] hover:bg-[#f5f5f4] transition-all">
+                <i data-lucide="layout" size="18"></i> <span class="text-[11px] mt-1 tracking-widest">桌位</span>
+            </button>
+        </nav>
+    </div>
+
+    <script>
+        // --- State Management ---
+        let guests = JSON.parse(localStorage.getItem('wedding_guests_v1')) || [
+            { id: 'g101', name: '新郎', count: 1, vegCount: 0, babyCount: 0, notifyStatus: 'other', phone: '', address: '', rsvp: true, side: 'groom', note: '核心成員' },
+            { id: 'g102', name: '新娘', count: 1, vegCount: 0, babyCount: 0, notifyStatus: 'other', phone: '', address: '', rsvp: true, side: 'bride', note: '核心成員' },
+            { id: 'g103', name: '新郎父母', count: 2, vegCount: 0, babyCount: 0, notifyStatus: 'other', phone: '', address: '', rsvp: true, side: 'groom', note: '核心成員' },
+            { id: 'g105', name: '新娘父母', count: 2, vegCount: 0, babyCount: 0, notifyStatus: 'other', phone: '', address: '', rsvp: true, side: 'bride', note: '核心成員' }
+        ];
+
+        let tables = JSON.parse(localStorage.getItem('wedding_tables_v1')) || [...Array(15)].map((_, i) => ({
+            id: i + 1,
+            name: i === 0 ? "主桌" : (i === 14 ? "預備桌" : `第 ${i + 1} 桌`),
+            type: i === 0 ? "main" : (i === 14 ? "backup" : "guest"),
+            capacity: 12,
+            assignedGuestIds: i === 0 ? ['g101', 'g102', 'g103', 'g105'] : []
+        }));
+
+        function saveData() {
+            localStorage.setItem('wedding_guests_v1', JSON.stringify(guests));
+            localStorage.setItem('wedding_tables_v1', JSON.stringify(tables));
+            render();
+        }
+
+        // --- UI Logic ---
+        function switchTab(tabId) {
+            document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`view-${tabId}`).classList.remove('hidden');
+            
+            // Update Active Buttons
+            document.querySelectorAll('.tab-btn, .mobile-tab-btn').forEach(btn => {
+                const isActive = btn.id.includes(tabId);
+                
+                if (isActive) {
+                    btn.classList.add('bg-[#b4a0a0]', 'text-white', 'shadow-sm');
+                    btn.classList.remove('text-[#78716c]', 'hover:bg-[#f5f5f4]', 'text-[#a8a29e]');
+                } else {
+                    btn.classList.remove('bg-[#b4a0a0]', 'text-white', 'shadow-sm');
+                    if (btn.classList.contains('mobile-tab-btn')) {
+                        btn.classList.add('text-[#a8a29e]');
+                    } else {
+                        btn.classList.add('text-[#78716c]', 'hover:bg-[#f5f5f4]');
+                    }
+                }
+            });
+            render();
+        }
+
+        const NOTIFY_MAP = {
+            not_notified: { label: '未通知', color: 'bg-[#f5f5f4] text-[#a8a29e] border border-[#e7e5e4]' },
+            digital: { label: '電子喜帖', color: 'bg-[#f3e8ff] text-[#9333ea] border border-[#e9d5ff]' },
+            paper: { label: '紙本喜帖', color: 'bg-[#ffedd5] text-[#b45309] border border-[#fed7aa]' },
+            other: { label: '其他', color: 'bg-[#e0f2fe] text-[#0369a1] border border-[#bae6fd]' }
+        };
+
+        function toggleNotify(id) {
+            const guest = guests.find(g => g.id === id);
+            const statuses = Object.keys(NOTIFY_MAP);
+            const next = statuses[(statuses.indexOf(guest.notifyStatus) + 1) % statuses.length];
+            guest.notifyStatus = next;
+            saveData();
+        }
+
+        function updateGuest(id, field, value) {
+            const guest = guests.find(g => g.id === id);
+            if (guest) {
+                guest[field] = (field === 'rsvp') ? value : value;
+                saveData();
+            }
+        }
+
+        function addGuest(side) {
+            const newGuest = { 
+                id: `g${Date.now()}`, name: '', count: 1, vegCount: 0, babyCount: 0, 
+                notifyStatus: 'not_notified', phone: '', address: '', rsvp: false, side, note: '' 
+            };
+            guests.push(newGuest);
+            saveData();
+        }
+
+        function removeGuest(id) {
+            const guest = guests.find(g => g.id === id);
+            if(!confirm(`確定要刪除賓客「${guest.name || '未命名'}」嗎？`)) return;
+            guests = guests.filter(g => g.id !== id);
+            tables.forEach(t => {
+                t.assignedGuestIds = t.assignedGuestIds.filter(gid => gid !== id);
+            });
+            saveData();
+        }
+
+        // --- Table Management Logic ---
+        function addTable() {
+            const newId = Date.now();
+            const newTable = {
+                id: newId,
+                name: `第 ${tables.length + 1} 桌`,
+                type: 'guest',
+                capacity: 12,
+                assignedGuestIds: []
+            };
+            tables.push(newTable);
+            saveData();
+        }
+
+        function updateTable(id, field, value) {
+            const table = tables.find(t => t.id == id);
+            if (table) {
+                table[field] = value;
+                saveData();
+            }
+        }
+
+        function deleteTable(id) {
+            const table = tables.find(t => t.id == id);
+            if(!confirm(`確定要刪除「${table.name}」嗎？桌上的賓客將會變回未分配狀態。`)) return;
+            tables = tables.filter(t => t.id != id);
+            saveData();
+        }
+
+        function assignToTable(tableId, guestId) {
+            if (!guestId) return;
+            const table = tables.find(t => t.id == tableId);
+            if (!table.assignedGuestIds.includes(guestId)) {
+                table.assignedGuestIds.push(guestId);
+                saveData();
+            }
+        }
+
+        function removeFromTable(tableId, guestId) {
+            const table = tables.find(t => t.id == tableId);
+            table.assignedGuestIds = table.assignedGuestIds.filter(id => id !== guestId);
+            saveData();
+        }
+
+        // --- Export CSV Logic ---
+        function downloadCSV(csvContent, fileName) {
+            const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            const url = URL.createObjectURL(blob);
+            link.setAttribute("href", url);
+            link.setAttribute("download", fileName);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function exportGuestsCSV() {
+            let csv = "分類,姓名,人數,素食人數,嬰兒座人數,通知狀態,已確認,電話,地址,備註\n";
+            guests.forEach(g => {
+                const side = g.side === 'groom' ? '男方' : '女方';
+                const status = NOTIFY_MAP[g.notifyStatus].label;
+                const rsvp = g.rsvp ? '是' : '否';
+                const row = [
+                    side, g.name, g.count, g.vegCount, g.babyCount, status, rsvp, g.phone, g.address, g.note
+                ].map(v => `"${(v || '').toString().replace(/"/g, '""')}"`).join(",");
+                csv += row + "\n";
+            });
+            downloadCSV(csv, `婚禮賓客名單備份_${new Date().toISOString().slice(0,10)}.csv`);
+        }
+
+        function exportSeatingCSV() {
+            let csv = "桌名,容納人數,目前人數,素食統計,嬰兒座統計,賓客名單\n";
+            tables.forEach(t => {
+                const assigned = guests.filter(g => t.assignedGuestIds.includes(g.id));
+                const currentCount = assigned.reduce((s, g) => s + (parseInt(g.count) || 0), 0);
+                const vegCount = assigned.reduce((s, g) => s + (parseInt(g.vegCount) || 0), 0);
+                const babyCount = assigned.reduce((s, g) => s + (parseInt(g.babyCount) || 0), 0);
+                const names = assigned.map(g => `${g.name}(${g.count})`).join("、");
+                
+                const row = [
+                    t.name, t.capacity, currentCount, vegCount, babyCount, names
+                ].map(v => `"${(v || '').toString().replace(/"/g, '""')}"`).join(",");
+                csv += row + "\n";
+            });
+            downloadCSV(csv, `婚宴桌位分配表_${new Date().toISOString().slice(0,10)}.csv`);
+        }
+
+        // --- Rendering ---
+        function render() {
+            renderGuestStats();
+            renderGuestTable('groom', 'groom-list-container');
+            renderGuestTable('bride', 'bride-list-container');
+            renderSeatingTotals();
+            renderTables();
+            lucide.createIcons();
+        }
+
+        function renderGuestStats() {
+            const stats = guests.reduce((acc, g) => {
+                const c = parseInt(g.count) || 0;
+                acc.total += c;
+                if (g.side === 'groom') {
+                    acc.groom += c;
+                    if (g.notifyStatus === 'not_notified') acc.groomNotify++;
+                } else {
+                    acc.bride += c;
+                    if (g.notifyStatus === 'not_notified') acc.brideNotify++;
+                }
+                if (g.rsvp) acc.rsvp++;
+                return acc;
+            }, { total: 0, groom: 0, bride: 0, rsvp: 0, groomNotify: 0, brideNotify: 0 });
+
+            document.getElementById('guest-stats').innerHTML = `
+                <div class="bg-white p-5 rounded-lg border border-[#f5f5f4] flex flex-col items-center justify-center gap-1 shadow-sm">
+                    <p class="text-[11px] text-[#b4a0a0] tracking-widest uppercase">預估總人數</p>
+                    <p class="text-2xl text-[#78716c] font-serif">${stats.total}</p>
+                </div>
+                <div class="bg-white p-5 rounded-lg border border-[#f5f5f4] flex flex-col items-center justify-center gap-1 shadow-sm">
+                    <p class="text-[11px] text-[#a8a29e] tracking-widest uppercase">男方人數 / 女方人數</p>
+                    <p class="text-lg text-[#78716c] font-serif">${stats.groom} / ${stats.bride}</p>
+                </div>
+                <div class="bg-white p-5 rounded-lg border border-[#f5f5f4] flex flex-col items-center justify-center gap-1 shadow-sm">
+                    <p class="text-[11px] text-[#d6d3d1] tracking-widest uppercase">未通知組數</p>
+                    <p class="text-2xl text-[#a8a29e] font-serif">${stats.groomNotify + stats.brideNotify}</p>
+                </div>
+                <div class="bg-white p-5 rounded-lg border border-[#f5f5f4] flex flex-col items-center justify-center gap-1 shadow-sm">
+                    <p class="text-[11px] text-[#8da399] tracking-widest uppercase">已確認出席組數</p>
+                    <p class="text-2xl text-[#5f736a] font-serif">${stats.rsvp} / ${guests.length}</p>
+                </div>
+            `;
+        }
+
+        function renderGuestTable(side, containerId) {
+            const list = guests.filter(g => g.side === side);
+            const isGroom = side === 'groom';
+            const themeColor = isGroom ? 'text-[#7da0b3] bg-[#f0f9ff]' : 'text-[#b4a0a0] bg-[#fff1f2]';
+            const btnColor = isGroom ? 'bg-[#7da0b3] hover:bg-[#688a9c]' : 'bg-[#b4a0a0] hover:bg-[#a39090]';
+            const sideLabel = isGroom ? '男方' : '女方';
+            const total = list.reduce((sum, g) => sum + (parseInt(g.count) || 0), 0);
+
+            let html = `
+                <div class="bg-white overflow-hidden p-0 mb-10 border border-[#f5f5f4] rounded-xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.02)]">
+                    <div class="px-6 py-4 border-b border-[#f5f5f4] bg-[#fbfaf8] flex justify-between items-center">
+                        <div class="flex items-center gap-4">
+                            <h3 class="text-base font-bold ${isGroom ? 'text-[#5f7d8c]' : 'text-[#b4a0a0]'} tracking-widest">${sideLabel}賓客</h3>
+                            <span class="px-3 py-1 rounded-full text-[10px] tracking-wide bg-white border border-[#e7e5e4] text-[#a8a29e]">共 ${total} 人</span>
+                        </div>
+                        <button onclick="addGuest('${side}')" class="flex items-center gap-2 ${btnColor} text-white px-4 py-1.5 rounded-lg text-xs transition-colors shadow-sm tracking-wide">
+                            <i data-lucide="user-plus" size="14"></i> 新增
+                        </button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-[13px] min-w-[950px] table-fixed">
+                            <thead class="bg-white text-[#d6d3d1] border-b border-[#f5f5f4] text-xs">
+                                <tr>
+                                    <th class="py-4 px-4 w-[140px] font-normal tracking-widest">姓名 (代表)</th>
+                                    <th class="py-4 px-2 w-[60px] text-center font-normal tracking-widest">人數</th>
+                                    <th class="py-4 px-2 w-[60px] text-center font-normal tracking-widest">素食</th>
+                                    <th class="py-4 px-2 w-[60px] text-center font-normal tracking-widest">嬰座</th>
+                                    <th class="py-4 px-2 w-[110px] text-center font-normal tracking-widest">通知</th>
+                                    <th class="py-4 px-2 w-[60px] text-center font-normal tracking-widest">出席</th>
+                                    <th class="py-4 px-3 w-[120px] text-center font-normal tracking-widest">電話</th>
+                                    <th class="py-4 px-4 w-[200px] font-normal tracking-widest">地址</th>
+                                    <th class="py-4 px-4 font-normal tracking-widest">備註</th>
+                                    <th class="py-4 px-2 w-[50px]"></th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-[#fcfbf9]">
+            `;
+
+            list.forEach(g => {
+                const notify = NOTIFY_MAP[g.notifyStatus];
+                html += `
+                    <tr class="${!g.rsvp ? 'bg-[#fafafa]' : 'hover:bg-[#faf9f8]'} transition-colors group">
+                        <td class="py-3 px-4"><input type="text" class="w-full bg-transparent border-b border-transparent focus:border-[#d6d3d1] transition-colors p-1 text-[#57534e] font-serif" value="${g.name}" onchange="updateGuest('${g.id}', 'name', this.value)" placeholder="姓名" /></td>
+                        <td class="py-3 px-2 text-center"><input type="number" class="w-full bg-transparent border-none p-0 text-[#78716c] text-center font-serif" value="${g.count}" onchange="updateGuest('${g.id}', 'count', this.value)" /></td>
+                        <td class="py-3 px-2 text-center"><input type="number" class="w-full bg-transparent border-none p-0 text-[#8da399] text-center font-serif" value="${g.vegCount}" onchange="updateGuest('${g.id}', 'vegCount', this.value)" /></td>
+                        <td class="py-3 px-2 text-center"><input type="number" class="w-full bg-transparent border-none p-0 text-[#7da0b3] text-center font-serif" value="${g.babyCount}" onchange="updateGuest('${g.id}', 'babyCount', this.value)" /></td>
+                        <td class="py-3 px-2 text-center">
+                            <button onclick="toggleNotify('${g.id}')" class="px-3 py-1 rounded text-[10px] tracking-wide transition-colors ${notify.color}">
+                                ${notify.label}
+                            </button>
+                        </td>
+                        <td class="py-3 px-2 text-center"><input type="checkbox" class="rounded text-[#8da399] focus:ring-[#8da399] border-[#d6d3d1] w-4 h-4 cursor-pointer" ${g.rsvp ? 'checked' : ''} onchange="updateGuest('${g.id}', 'rsvp', this.checked)" /></td>
+                        <td class="py-3 px-3"><input type="text" class="w-full bg-transparent border-b border-transparent focus:border-[#d6d3d1] transition-colors p-1 text-[#78716c] text-center text-xs tracking-wider font-serif" value="${g.phone}" onchange="updateGuest('${g.id}', 'phone', this.value)" placeholder="電話" /></td>
+                        <td class="py-3 px-4"><input type="text" class="w-full bg-transparent border-b border-transparent focus:border-[#d6d3d1] transition-colors p-1 truncate text-[#78716c] text-xs font-serif" value="${g.address}" onchange="updateGuest('${g.id}', 'address', this.value)" placeholder="地址" /></td>
+                        <td class="py-3 px-4"><input type="text" class="w-full bg-transparent border-b border-transparent focus:border-[#d6d3d1] transition-colors p-1 text-[#a8a29e] text-xs font-serif" value="${g.note}" onchange="updateGuest('${g.id}', 'note', this.value)" placeholder="備註..." /></td>
+                        <td class="py-3 px-2 text-center"><button onclick="removeGuest('${g.id}')" class="text-[#e7e5e4] hover:text-[#b4a0a0] transition-colors opacity-0 group-hover:opacity-100"><i data-lucide="trash-2" size="14"></i></button></td>
+                    </tr>
+                `;
+            });
+
+            html += `</tbody></table></div></div>`;
+            document.getElementById(containerId).innerHTML = html;
+        }
+
+        function renderSeatingTotals() {
+            const totals = tables.reduce((acc, t) => {
+                const tableGuests = guests.filter(g => t.assignedGuestIds.includes(g.id));
+                acc.count += tableGuests.reduce((s, g) => s + (parseInt(g.count) || 0), 0);
+                acc.veg += tableGuests.reduce((s, g) => s + (parseInt(g.vegCount) || 0), 0);
+                acc.baby += tableGuests.reduce((s, g) => s + (parseInt(g.babyCount) || 0), 0);
+                return acc;
+            }, { count: 0, veg: 0, baby: 0 });
+
+            document.getElementById('seating-totals').innerHTML = `
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-[#f5f5f4] flex justify-between items-center text-[#78716c]">
+                    <div class="flex items-center gap-3"><i data-lucide="users" class="text-[#d6d3d1]"></i><p class="text-xs tracking-widest uppercase">總入座</p></div>
+                    <p class="text-xl font-serif">${totals.count}</p>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-[#f5f5f4] flex justify-between items-center text-[#5f736a]">
+                    <div class="flex items-center gap-3"><i data-lucide="leaf" class="text-[#a3b18a]"></i><p class="text-xs tracking-widest uppercase">總素食</p></div>
+                    <p class="text-xl font-serif">${totals.veg}</p>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-[#f5f5f4] flex justify-between items-center text-[#5f7d8c]">
+                    <div class="flex items-center gap-3"><i data-lucide="baby" class="text-[#94a3b8]"></i><p class="text-xs tracking-widest uppercase">總嬰座</p></div>
+                    <p class="text-xl font-serif">${totals.baby}</p>
+                </div>
+            `;
+        }
+
+        function renderTables() {
+            const unassigned = guests.filter(g => g.name && !tables.some(t => t.assignedGuestIds.includes(g.id)));
+            let html = '';
+
+            tables.forEach(t => {
+                const assigned = guests.filter(g => t.assignedGuestIds.includes(g.id));
+                const currentCount = assigned.reduce((s, g) => s + (parseInt(g.count) || 0), 0);
+                const vegCount = assigned.reduce((s, g) => s + (parseInt(g.vegCount) || 0), 0);
+                const babyCount = assigned.reduce((s, g) => s + (parseInt(g.babyCount) || 0), 0);
+                const isOver = currentCount > t.capacity;
+
+                const cardStyle = t.type === 'main' 
+                    ? 'border-[#e7d5d5] bg-[#fffcfc]' 
+                    : 'border-[#f5f5f4] bg-white';
+                
+                const titleColor = t.type === 'main' ? 'text-[#b4a0a0]' : 'text-[#78716c]';
+
+                html += `
+                    <div class="p-6 rounded-xl shadow-[0_4px_15px_-3px_rgba(0,0,0,0.02)] border ${cardStyle} group transition-all hover:shadow-md">
+                        <div class="flex items-start gap-3 mb-5">
+                            <div class="flex-1 min-w-0">
+                                <input type="text" 
+                                    value="${t.name}" 
+                                    onchange="updateTable(${t.id}, 'name', this.value)"
+                                    class="text-lg font-bold bg-transparent w-full border-b border-transparent hover:border-[#e7e5e4] focus:border-[#b4a0a0] transition-colors ${titleColor} font-serif tracking-wide"
+                                />
+                                <div class="flex items-center gap-2 mt-2">
+                                    <p class="text-[10px] text-[#d6d3d1] tracking-widest">CAPACITY</p>
+                                    <input type="number" 
+                                        value="${t.capacity}" 
+                                        onchange="updateTable(${t.id}, 'capacity', this.value)"
+                                        class="text-[11px] text-[#a8a29e] w-8 bg-transparent border-b border-[#f5f5f4] text-center font-serif"
+                                    />
+                                </div>
+                            </div>
+                            
+                            <div class="shrink-0 flex items-start gap-3">
+                                <div class="text-right">
+                                    <p class="text-xl font-serif ${isOver ? 'text-[#b4a0a0] line-through decoration-double' : 'text-[#78716c]'}">${currentCount}</p>
+                                    <div class="flex gap-2 text-[10px] justify-end mt-1">
+                                        <span class="text-[#8da399] flex items-center gap-0.5"><i data-lucide="leaf" size="10"></i>${vegCount}</span>
+                                        <span class="text-[#7da0b3] flex items-center gap-0.5"><i data-lucide="baby" size="10"></i>${babyCount}</span>
+                                    </div>
+                                </div>
+                                <button type="button" onclick="deleteTable(${t.id})" class="text-[#e7e5e4] hover:text-[#b4a0a0] p-1 rounded-full transition-colors" title="刪除">
+                                    <i data-lucide="trash-2" size="14"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="space-y-2 mb-4 min-h-[100px] max-h-[220px] overflow-y-auto pr-1 custom-scrollbar">
+                            ${assigned.map(g => `
+                                <div class="flex justify-between items-center bg-[#fbfaf8] p-2.5 rounded-lg border border-[#f5f5f4] text-[13px] text-[#57534e] group/item hover:border-[#e7e5e4] transition-colors">
+                                    <span class="font-serif tracking-wide">${g.name} <span class="text-[#a8a29e] text-xs">(${g.count})</span></span>
+                                    <button onclick="removeFromTable(${t.id}, '${g.id}')" class="text-[#e7e5e4] hover:text-[#b4a0a0] opacity-0 group-hover/item:opacity-100 transition-all"><i data-lucide="x" size="14"></i></button>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <select onchange="assignToTable(${t.id}, this.value)" class="w-full bg-white border border-[#f5f5f4] rounded-lg text-[12px] py-2 pl-3 focus:border-[#b4a0a0] focus:ring-0 cursor-pointer text-[#a8a29e] hover:border-[#e7e5e4] transition-colors font-serif tracking-wide">
+                            <option value="">+ 入座</option>
+                            ${unassigned.map(g => `<option value="${g.id}">${g.name} (${g.count}人)</option>`).join('')}
+                        </select>
+                    </div>
+                `;
+            });
+            document.getElementById('tables-grid').innerHTML = html;
+        }
+
+        // --- Service Worker Registration ---
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(registration => {
+                        console.log('ServiceWorker registration successful');
+                    })
+                    .catch(err => {
+                        console.log('ServiceWorker registration failed: ', err);
+                    });
+            });
+
+            // Handle PWA Install Prompt
+            let deferredPrompt;
+            const addBtn = document.getElementById('pwa-install-btn');
+            
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                deferredPrompt = e;
+                addBtn.style.display = 'flex'; // Show button
+            });
+
+            addBtn.addEventListener('click', (e) => {
+                addBtn.style.display = 'none';
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    deferredPrompt = null;
+                });
+            });
+        }
+
+        window.onload = () => {
+            render();
+        };
+    </script>
+</body>
+</html>
